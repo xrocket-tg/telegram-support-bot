@@ -1,7 +1,7 @@
-import { Context } from './interfaces';
-import cache from './cache';
-import * as db from './db';
-import * as middleware from './middleware';
+import { Context } from "./interfaces";
+import cache from "./cache";
+import * as db from "./db";
+import * as middleware from "./middleware";
 
 /** Message template helper
  * @param {String} ticket
@@ -13,26 +13,29 @@ import * as middleware from './middleware';
 function ticketMsg(
   ticket: { toString: () => string },
   message: {
-    from: { first_name: string | any[]; language_code: any };
+    from: { first_name: string | any[]; language_code: any; last_name?: any };
     text: string | any[];
   },
   tag: string,
   anon = true,
-  autoReplyInfo: any,
+  autoReplyInfo: any
 ) {
-  let link = '';
+  let link = "";
   if (!anon) {
     link = `tg://user?id=${cache.ticketID}`;
   }
   const esc: any = middleware.strictEscape;
   return (
     `${cache.config.language.ticket} ` +
-    `#T${ticket.toString().padStart(6, '0')} ${cache.config.language.from} ` +
-    `[${esc(message.from.first_name)}](${link})` +
+    `#T${ticket.toString().padStart(6, "0")} ${cache.config.language.from} ` +
+    `[${esc(message.from.first_name ?? "")} ${esc(
+      message.from.last_name ?? ""
+    )}](${link}) ` +
+    `tgid: \`${cache.ticketID}\`  ` +
     ` ${cache.config.language.language}: ` +
     `${message.from.language_code} ${tag}\n\n` +
     `${esc(message.text)}\n\n` +
-    (autoReplyInfo ? `_${autoReplyInfo}_` : '')
+    (autoReplyInfo ? `_${autoReplyInfo}_` : "")
   );
 }
 
@@ -45,15 +48,16 @@ function ticketMsg(
 function autoReply(ctx: Context) {
   const strings = cache.config.autoreply;
   for (const i in strings) {
-    if (ctx.message.text.toString().indexOf(strings[i]['question']) > -1) {
+    if (ctx.message.text.toString().indexOf(strings[i]["question"]) > -1) {
       // Define message
-      const msg = cache.config.clean_replies ? strings[i]['answer'] :
-        `${cache.config.language.dear} ` +
-        `${ctx.message.from.first_name},\n\n` +
-        `${strings[i]['answer']}\n\n` +
-        `${cache.config.language.regards}\n` +
-        `${cache.config.language.automatedReplyAuthor}\n\n` +
-        `_${cache.config.language.automatedReply}_`;
+      const msg = cache.config.clean_replies
+        ? strings[i]["answer"]
+        : `${cache.config.language.dear} ` +
+          `${ctx.message.from.first_name},\n\n` +
+          `${strings[i]["answer"]}\n\n` +
+          `${cache.config.language.regards}\n` +
+          `${cache.config.language.automatedReplyAuthor}\n\n` +
+          `_${cache.config.language.automatedReply}_`;
 
       // Send message with keyboard
       middleware.reply(ctx, msg, { parse_mode: cache.config.parse_mode });
@@ -78,9 +82,9 @@ function chat(ctx: Context, chat: { id: string }) {
       return;
     }
   }
-  const autoReplyInfo = isAutoReply ?
-    cache.config.language.automatedReplySent :
-    undefined;
+  const autoReplyInfo = isAutoReply
+    ? cache.config.language.automatedReplySent
+    : undefined;
 
   if (cache.ticketIDs[cache.ticketID] === undefined) {
     cache.ticketIDs.push(cache.ticketID);
@@ -95,12 +99,13 @@ function chat(ctx: Context, chat: { id: string }) {
         if (!isAutoReply && cache.config.autoreply_confirmation) {
           middleware.msg(
             chat.id,
-            cache.config.language.confirmationMessage + '\n' +
-            (cache.config.show_user_ticket ?
-              cache.config.language.ticket +
-              ' #T' +
-              ticket.id.toString().padStart(6, '0') :
-              ''),
+            cache.config.language.confirmationMessage +
+              "\n" +
+              (cache.config.show_user_ticket
+                ? cache.config.language.ticket +
+                  " #T" +
+                  ticket.id.toString().padStart(6, "0")
+                : "")
           );
         }
 
@@ -112,14 +117,14 @@ function chat(ctx: Context, chat: { id: string }) {
             ctx.message,
             ctx.session.groupTag,
             cache.config.anonymous_tickets,
-            autoReplyInfo,
+            autoReplyInfo
           ),
-          { parse_mode: cache.config.parse_mode },
+          { parse_mode: cache.config.parse_mode }
         );
 
         // Check if group flag is set and is not admin chat
         if (
-          ctx.session.group !== '' &&
+          ctx.session.group !== "" &&
           ctx.session.group != cache.config.staffchat_id
         ) {
           // Send to group-staff chat
@@ -130,36 +135,36 @@ function chat(ctx: Context, chat: { id: string }) {
               ctx.message,
               ctx.session.groupTag,
               cache.config.anonymous_tickets,
-              autoReplyInfo,
+              autoReplyInfo
             ),
-            cache.config.allow_private ?
-              {
-                parse_mode: cache.config.parse_mode,
-                reply_markup: {
-                  html: '',
-                  inline_keyboard: [
-                    [
-                      {
-                        text: cache.config.language.replyPrivate,
-                        callback_data:
-                          ctx.from.id +
-                          '---' +
-                          ctx.message.from.first_name +
-                          '---' +
-                          ctx.session.groupCategory +
-                          '---' +
-                          ticket.id,
-                      },
+            cache.config.allow_private
+              ? {
+                  parse_mode: cache.config.parse_mode,
+                  reply_markup: {
+                    html: "",
+                    inline_keyboard: [
+                      [
+                        {
+                          text: cache.config.language.replyPrivate,
+                          callback_data:
+                            ctx.from.id +
+                            "---" +
+                            ctx.message.from.first_name +
+                            "---" +
+                            ctx.session.groupCategory +
+                            "---" +
+                            ticket.id,
+                        },
+                      ],
                     ],
-                  ],
-                },
-              } :
-              {
-                parse_mode: cache.config.parse_mode
-              },
+                  },
+                }
+              : {
+                  parse_mode: cache.config.parse_mode,
+                }
           );
         }
-      },
+      }
     );
     // wait 5 minutes before this message appears again and do not
     // send notification sounds in that time to avoid spam
@@ -180,12 +185,12 @@ function chat(ctx: Context, chat: { id: string }) {
             ctx.message,
             ctx.session.groupTag,
             cache.config.anonymous_tickets,
-            autoReplyInfo,
+            autoReplyInfo
           ),
-          { parse_mode: cache.config.parse_mode },
+          { parse_mode: cache.config.parse_mode }
         );
         if (
-          ctx.session.group !== '' &&
+          ctx.session.group !== "" &&
           ctx.session.group != cache.config.staffchat_id
         ) {
           middleware.msg(
@@ -195,12 +200,12 @@ function chat(ctx: Context, chat: { id: string }) {
               ctx.message,
               ctx.session.groupTag,
               cache.config.anonymous_tickets,
-              autoReplyInfo,
+              autoReplyInfo
             ),
-            { parse_mode: cache.config.parse_mode },
+            { parse_mode: cache.config.parse_mode }
           );
         }
-      },
+      }
     );
   } else if (cache.ticketSent[cache.ticketID] === cache.config.spam_cant_msg) {
     cache.ticketSent[cache.ticketID]++;
@@ -220,10 +225,10 @@ function chat(ctx: Context, chat: { id: string }) {
           ctx.message,
           ctx.session.groupTag,
           cache.config.anonymous_tickets,
-          autoReplyInfo,
-        ),
+          autoReplyInfo
+        )
       );
-    },
+    }
   );
 }
 
